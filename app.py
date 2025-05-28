@@ -1,11 +1,8 @@
 import streamlit as st
 from PIL import Image
 from transformers import BlipProcessor, BlipForConditionalGeneration
-from huggingface_hub import InferenceClient
+from transformers import pipeline
 import torch
-
-hf_model = "mistralai/Mixtral-8x7B-Instruct-v0.1"
-client = InferenceClient(hf_model)
 
 @st.cache_resource
 def load_blip_model():
@@ -15,29 +12,29 @@ def load_blip_model():
 
 processor, blip_model = load_blip_model()
 
-st.title("🧠 AI Radiology Report Generator")
-st.caption("Upload a chest X-ray. The AI will generate a professional radiology report.")
+@st.cache_resource
+def load_text_generator():
+    return pipeline("text-generation", model="tiiuae/falcon-7b-instruct", device_map="auto")
 
-# Upload image
+text_generator = load_text_generator()
+
+st.title("🧠 AI Radiology Report Generator")
+st.caption("Upload a chest X-ray. The AI will generate a radiology report using image caption + text generation.")
+
 uploaded_file = st.file_uploader("Upload Chest X-ray Image", type=["jpg", "jpeg", "png"])
 
 def generate_radiology_report(caption: str) -> str:
-    prompt = f"""
-You are a radiologist assistant AI.
+    prompt = f"""You are a professional radiologist.
 
-A chest X-ray has been described as follows:
-\"{caption}\"
+A chest X-ray shows: "{caption}"
 
-Generate a structured radiology report including:
+Write a radiology report:
 
-**Findings**: Describe visual observations from the X-ray.
-
-**Impression**: Summarize diagnostic conclusion.
-
-Use professional clinical terminology.
+**Findings**: 
+**Impression**: 
 """
-    response = client.text_generation(prompt=prompt, max_new_tokens=400, temperature=0.7)
-    return response.strip()
+    result = text_generator(prompt, max_new_tokens=300, do_sample=True, temperature=0.7)
+    return result[0]["generated_text"].replace(prompt, "").strip()
 
 if uploaded_file:
     image = Image.open(uploaded_file).convert("RGB")
@@ -55,4 +52,4 @@ if uploaded_file:
         st.write(report)
 
     st.markdown("---")
-    st.caption("🔬 Note: This is a prototype using BLIP + Hugging Face LLM. Accuracy may vary.")
+    st.caption("⚠️ Note: This prototype uses BLIP and Falcon-7B. Output is not a medical diagnosis.")
