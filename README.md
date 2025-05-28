@@ -1,7 +1,7 @@
 
 # 🩺 AI-Powered Radiology Report Generator
 
-Automatically generate medical reports from chest X-ray images using a vision-language model.
+Automatically generate medical reports from chest X-ray images.
 
 ---
 
