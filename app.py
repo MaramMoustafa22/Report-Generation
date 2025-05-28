@@ -1,10 +1,11 @@
 import os
 import asyncio
 
-# --- Fix: Prevent Streamlit + torch watcher crash ---
+# --- Environment Fixes to Prevent Torch & Streamlit Errors ---
 os.environ["STREAMLIT_WATCHER_TYPE"] = "none"
+os.environ["PYTORCH_DISABLE_MKLDNN"] = "1"
 
-# --- Fix: Patch asyncio event loop error ---
+# --- Asyncio Patch for Streamlit ---
 try:
     asyncio.get_running_loop()
 except RuntimeError:
@@ -15,20 +16,21 @@ from PIL import Image
 from transformers import BlipProcessor, BlipForConditionalGeneration
 from huggingface_hub import InferenceClient
 
-# Load BLIP model and processor for image captioning
+# --- Load BLIP Model ---
 @st.cache_resource
 def load_blip_model():
     processor = BlipProcessor.from_pretrained("Salesforce/blip-image-captioning-base")
     model = BlipForConditionalGeneration.from_pretrained("Salesforce/blip-image-captioning-base")
     return processor, model
 
-# Load Hugging Face Inference Client for text generation
+# --- Load Hugging Face Inference Client ---
 @st.cache_resource
 def load_hf_client():
-    hf_token = st.secrets["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"]
+    # Ensure you have `hf_token` defined in `.streamlit/secrets.toml`
+    hf_token = st.secrets["hf_token"]
     return InferenceClient(token=hf_token)
 
-# Generate radiology report using Falcon-7B
+# --- Generate Radiology Report ---
 def generate_radiology_report(caption):
     client = load_hf_client()
     prompt = f"""You are a radiology assistant AI. Generate a professional radiology report based on the provided image description.
@@ -40,7 +42,7 @@ def generate_radiology_report(caption):
         prompt=prompt,
         max_new_tokens=400,
         temperature=0.7,
-        model="tiiuae/falcon-7b-instruct"  # Explicit model
+        model="tiiuae/falcon-7b-instruct"  # Specify the model
     )
     return response.strip()
 
