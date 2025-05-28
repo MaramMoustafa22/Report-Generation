@@ -1,5 +1,5 @@
 streamlit
-openai
 transformers
-Pillow
 torch
+Pillow
+huggingface_hub
