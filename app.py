@@ -1,72 +1,56 @@
-import os
-import asyncio
-
-# --- Environment Fixes to Prevent Torch & Streamlit Errors ---
-os.environ["STREAMLIT_WATCHER_TYPE"] = "none"
-os.environ["PYTORCH_DISABLE_MKLDNN"] = "1"
-
-# --- Asyncio Patch for Streamlit ---
-try:
-    asyncio.get_running_loop()
-except RuntimeError:
-    asyncio.set_event_loop(asyncio.new_event_loop())
-
 import streamlit as st
 from PIL import Image
 from transformers import BlipProcessor, BlipForConditionalGeneration
 from huggingface_hub import InferenceClient
 
-# --- Load BLIP Model ---
+# Load BLIP model (image captioning)
 @st.cache_resource
-def load_blip_model():
+def load_caption_model():
     processor = BlipProcessor.from_pretrained("Salesforce/blip-image-captioning-base")
     model = BlipForConditionalGeneration.from_pretrained("Salesforce/blip-image-captioning-base")
     return processor, model
 
-# --- Load Hugging Face Inference Client ---
+# Hugging Face Inference Client (text generation)
 @st.cache_resource
 def load_hf_client():
-    # Ensure you have `hf_token` defined in `.streamlit/secrets.toml`
-    hf_token = st.secrets["hf_token"]
-    return InferenceClient(token=hf_token)
+    return InferenceClient(token=st.secrets["hf_token"])
 
-# --- Generate Radiology Report ---
-def generate_radiology_report(caption):
-    client = load_hf_client()
-    prompt = f"""You are a radiology assistant AI. Generate a professional radiology report based on the provided image description.
+# Generate caption
+def generate_caption(image):
+    processor, model = load_caption_model()
+    inputs = processor(images=image, return_tensors="pt")
+    output = model.generate(**inputs)
+    return processor.decode(output[0], skip_special_tokens=True)
+
+# Generate report
+def generate_report(caption):
+    prompt = f"""You are a radiology assistant. Generate a short radiology report based on the image description.
 
 **Findings**: {caption}
 
-**Impression**: Provide diagnostic summary."""
-    response = client.text_generation(
-        prompt=prompt,
-        max_new_tokens=400,
-        temperature=0.7,
-        model="tiiuae/falcon-7b-instruct"  # Specify the model
-    )
-    return response.strip()
+**Impression**: Diagnostic summary.
+"""
+    client = load_hf_client()
+    return client.text_generation(prompt, model="tiiuae/falcon-7b-instruct", max_new_tokens=300)
 
-# --- Streamlit UI ---
+# UI
 st.set_page_config(page_title="Radiology Report Generator", layout="centered")
-st.title("📄 Radiology Report Generator")
+st.title("🩻 Radiology Report Generator")
 
-uploaded_file = st.file_uploader("📤 Upload Chest X-ray", type=["jpg", "jpeg", "png"])
-
+uploaded_file = st.file_uploader("Upload Chest X-ray (JPG/PNG)", type=["jpg", "jpeg", "png"])
 if uploaded_file:
     image = Image.open(uploaded_file).convert("RGB")
     st.image(image, caption="Uploaded Image", use_container_width=True)
 
-    with st.spinner("🔍 Generating image caption..."):
-        processor, blip_model = load_blip_model()
-        inputs = processor(images=image, return_tensors="pt")
-        outputs = blip_model.generate(**inputs, max_new_tokens=50)
-        caption = processor.decode(outputs[0], skip_special_tokens=True)
-        st.markdown(f"🧠 **Visual Description:** _{caption}_")
+    with st.spinner("Generating visual description..."):
+        caption = generate_caption(image)
+        st.success("Caption Generated!")
+        st.markdown(f"**🧠 Description:** _{caption}_")
 
-    with st.spinner("📝 Generating Report using Falcon-7B..."):
+    with st.spinner("Generating radiology report..."):
         try:
-            report = generate_radiology_report(caption)
-            st.markdown("### 📄 Generated Radiology Report")
-            st.write(report)
+            report = generate_report(caption)
+            st.markdown("### 📄 Radiology Report")
+            st.write(report.strip())
         except Exception as e:
-            st.error(f"Report generation failed: {str(e)}")
+            st.error(f"Error generating report: {str(e)}")
