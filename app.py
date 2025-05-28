@@ -4,10 +4,10 @@ from transformers import BlipProcessor, BlipForConditionalGeneration
 from huggingface_hub import InferenceClient
 import torch
 
-# Set page config
+# Page config
 st.set_page_config(page_title="AI Radiology Report Generator", layout="centered")
 
-# Load BLIP
+# Load BLIP model
 @st.cache_resource
 def load_blip_model():
     processor = BlipProcessor.from_pretrained("Salesforce/blip-image-captioning-base")
@@ -16,46 +16,47 @@ def load_blip_model():
 
 processor, blip_model = load_blip_model()
 
-# Load HF Inference Client (✅ Working model)
-# client = InferenceClient("tiiuae/falcon-7b-instruct", token=st.secrets["HF_TOKEN"])
-client = InferenceClient("HuggingFaceH4/zephyr-7b-beta", token=st.secrets["HF_TOKEN"])
+# Setup Hugging Face Inference Client (Lightweight + Supported model)
+client = InferenceClient(
+    model="HuggingFaceH4/zephyr-7b-beta", 
+    token=st.secrets["HF_TOKEN"]
+)
 
-
-# Generate report from caption
 def generate_radiology_report(caption: str) -> str:
     prompt = f"""
 You are a professional radiologist.
 
-A chest X-ray has been described as: "{caption}"
+A chest X-ray image was described visually as follows:
+"{caption}"
 
-Write a radiology report including:
+Write a detailed radiology report with two sections:
 
-**Findings**: Describe anatomical observations.
+**Findings**: Describe the visual anatomical observations.
 
-**Impression**: Provide diagnostic summary.
+**Impression**: Provide a diagnostic summary or conclusion.
 """
     response = client.text_generation(prompt=prompt, max_new_tokens=400, temperature=0.7)
     return response.strip()
 
 # UI
 st.title("🩻 AI Radiology Report Generator")
-st.caption("Upload a chest X-ray. This AI will generate a structured report.")
+st.caption("Upload a chest X-ray. The AI will describe the image and generate a formal radiology report.")
 
-uploaded_file = st.file_uploader("📤 Upload a Chest X-ray Image", type=["jpg", "jpeg", "png"])
+uploaded_file = st.file_uploader("📤 Upload Chest X-ray Image", type=["jpg", "jpeg", "png"])
 
 if uploaded_file:
     image = Image.open(uploaded_file).convert("RGB")
-    st.image(image, caption="📷 Uploaded Chest X-ray", use_column_width=True)
+    st.image(image, caption="📷 Uploaded X-ray", use_container_width=True)
 
-    with st.spinner("🔍 Describing image using BLIP..."):
+    with st.spinner("🔍 Describing image with BLIP..."):
         inputs = processor(image, return_tensors="pt")
         outputs = blip_model.generate(**inputs, max_new_tokens=50)
         caption = processor.decode(outputs[0], skip_special_tokens=True)
         st.markdown(f"🧠 **Visual Description:** _{caption}_")
 
-    with st.spinner("📝 Generating Report using Falcon-7B..."):
+    with st.spinner("📝 Generating Report..."):
         report = generate_radiology_report(caption)
         st.markdown("### 📄 Generated Radiology Report")
         st.write(report)
 
-    st.caption("⚠️ Educational prototype. Not for clinical use.")
+    st.caption("⚠️ This is a demo using pretrained models. Outputs are for research and educational use only.")
