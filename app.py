@@ -12,7 +12,7 @@ def load_model():
 
 processor, model = load_model()
 
-st.title("🩻 Radiology Report Generator (Prototype)")
+st.title("Radiology Report Generator")
 
 uploaded_file = st.file_uploader("Upload a Chest X-ray Image", type=["jpg", "jpeg", "png"])
 
@@ -24,8 +24,6 @@ if uploaded_file:
     out = model.generate(**inputs, max_new_tokens=50)
     caption = processor.decode(out[0], skip_special_tokens=True)
 
-    st.markdown("### 📋 BLIP Visual Caption:")
-    st.write(caption)
 
     prompt = f"""
     You are a radiologist AI assistant. Based on the following visual findings from a chest X-ray, generate a professional radiology report including both 'Findings' and 'Impression'.
