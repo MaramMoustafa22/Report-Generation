@@ -3,10 +3,8 @@ from PIL import Image
 from transformers import BlipProcessor, BlipForConditionalGeneration, pipeline
 import torch
 
-# Set page config
 st.set_page_config(page_title="AI Radiology Report Generator", layout="centered")
 
-# Load BLIP model for image captioning
 @st.cache_resource
 def load_blip():
     processor = BlipProcessor.from_pretrained("Salesforce/blip-image-captioning-base")
@@ -15,28 +13,25 @@ def load_blip():
 
 processor, blip_model = load_blip()
 
-# Load local text generation model using pipeline
 @st.cache_resource
 def load_text_pipeline():
-    return pipeline("text-generation", model="tiiuae/falcon-7b-instruct", device_map="auto")
+    return pipeline("text-generation", model="sshleifer/distill-gpt2")  # ✅ lightweight
 
 text_generator = load_text_pipeline()
 
-# Function to generate report
 def generate_radiology_report(caption: str) -> str:
     prompt = f"""
     You are a radiologist.
 
-    Describe this chest X-ray based on visual description: "{caption}"
+    Visual description: "{caption}"
 
-    Write a detailed radiology report with:
-    **Findings**: Describe anatomical observations.
-    **Impression**: Provide clinical interpretation.
+    **Findings**: Describe the X-ray.
+
+    **Impression**: Provide diagnostic summary.
     """
-    result = text_generator(prompt, max_new_tokens=300, do_sample=True, temperature=0.7)
+    result = text_generator(prompt, max_new_tokens=200, do_sample=True, temperature=0.7)
     return result[0]["generated_text"]
 
-# UI
 st.title("🩻 AI Radiology Report Generator")
 st.caption("Upload a chest X-ray to generate a professional-style report.")
 
@@ -57,4 +52,4 @@ if uploaded_file:
         st.markdown("### 📄 Generated Radiology Report")
         st.write(report)
 
-    st.caption("⚠️ This is a prototype. Generated reports are not clinically validated.")
+    st.caption("⚠️ Prototype. Not for clinical use.")
