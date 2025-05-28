@@ -17,7 +17,9 @@ def load_blip_model():
 processor, blip_model = load_blip_model()
 
 # Load HF Inference Client (✅ Working model)
-client = InferenceClient("tiiuae/falcon-7b-instruct", token=st.secrets["HF_TOKEN"])
+# client = InferenceClient("tiiuae/falcon-7b-instruct", token=st.secrets["HF_TOKEN"])
+client = InferenceClient("HuggingFaceH4/zephyr-7b-beta", token=st.secrets["HF_TOKEN"])
+
 
 # Generate report from caption
 def generate_radiology_report(caption: str) -> str:
