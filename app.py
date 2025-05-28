@@ -39,9 +39,9 @@ Generate a structured radiology report including:
 Use professional medical terminology appropriate for a clinical radiology report.
 """
     response = openai.ChatCompletion.create(
-        model="gpt-4",  # Or "gpt-3.5-turbo" if you don't have GPT-4 access
+        model="gpt-4",  
         messages=[{"role": "user", "content": prompt}],
-        temperature=0.5,
+        temperature=0.7,
         max_tokens=400
     )
     return response.choices[0].message["content"]
