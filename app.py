@@ -6,6 +6,7 @@ from transformers import BlipProcessor, BlipForConditionalGeneration
 from huggingface_hub import InferenceClient
 import torch
 
+# Load BLIP model
 @st.cache_resource
 def load_blip_model():
     processor = BlipProcessor.from_pretrained("Salesforce/blip-image-captioning-base")
@@ -14,8 +15,10 @@ def load_blip_model():
 
 processor, blip_model = load_blip_model()
 
+# Load LLM client (Mistral-7B)
 client = InferenceClient("mistralai/Mistral-7B-Instruct-v0.1")
 
+# Generate a structured radiology report
 def generate_radiology_report(caption: str) -> str:
     prompt = f"""
 You are a professional radiologist.
@@ -31,7 +34,7 @@ Write a formal radiology report including:
     response = client.text_generation(prompt=prompt, max_new_tokens=400, temperature=0.7)
     return response.strip()
 
-st.set_page_config(page_title="AI Radiology Report Generator", layout="centered")
+# Streamlit UI
 st.title("AI Radiology Report Generator")
 st.caption("Upload a chest X-ray. The AI will generate a structured radiology report based on the visual description.")
 
@@ -54,4 +57,4 @@ if uploaded_file:
 
     st.markdown("---")
     st.caption("⚠️ This is a prototype for educational purposes. Outputs are not medically validated.")
-s
+    
