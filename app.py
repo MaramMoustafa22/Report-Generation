@@ -35,7 +35,7 @@ def generate_report(caption):
 
 # UI
 st.set_page_config(page_title="Radiology Report Generator", layout="centered")
-st.title("🩻 Radiology Report Generator")
+st.title("Radiology Report Generator")
 
 uploaded_file = st.file_uploader("Upload Chest X-ray (JPG/PNG)", type=["jpg", "jpeg", "png"])
 if uploaded_file:
